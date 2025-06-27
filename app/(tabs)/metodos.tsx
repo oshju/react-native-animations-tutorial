@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Animated, Dimensions, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Dimensions, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 // Métodos utilitarios
 function highNumber(a: number, b: number): number {
@@ -133,7 +133,11 @@ export default function Metodos() {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView 
+      style={styles.container} 
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+    >
       <Text style={styles.text}>Método</Text>
       <Animated.ScrollView
         horizontal
@@ -229,22 +233,35 @@ export default function Metodos() {
       <Animated.Text style={styles.animatedText}>
         Texto animado con resorte
       </Animated.Text>
-    </View>
+      <View style={styles.greenBox}>
+        <Image
+          source={require('../../assets/images/react-logo.png')}
+          style={styles.boxImage}
+          resizeMode="contain"
+        />
+        <Text style={styles.boxText}>Recuadro Verde</Text>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: '#fff',
+  },
+  contentContainer: {
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingBottom: 100,
+    paddingTop: 20,
   },
   text: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#2196F3',
-    margin: 16,
+    marginTop: 50,
+    marginBottom: 20,
     textAlign: 'center',
   },
   animatedText: {
