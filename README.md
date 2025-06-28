@@ -10,6 +10,7 @@ Este proyecto contiene una colección completa de animaciones en React Native, d
 - ✅ Carousel con animaciones de scroll
 - ✅ Botones interactivos con feedback visual
 - ✅ Integración con enlaces externos
+- ✅ **OAuth 2.0 con Spotify** (Login y gestión de playlists)
 
 ## 🚀 Instalación
 
@@ -27,6 +28,283 @@ npx expo run:ios
 # Ejecutar en Android
 npx expo run:android
 ```
+
+## 🔐 OAuth 2.0 con Spotify - Tutorial Completo
+
+### 📋 Prerrequisitos
+
+1. **Cuenta de Spotify Developer:**
+   - Ve a [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+   - Inicia sesión con tu cuenta de Spotify
+   - Crea una nueva aplicación
+
+2. **Dependencias necesarias:**
+   ```bash
+   npx expo install expo-auth-session expo-crypto expo-web-browser
+   ```
+
+### 🛠️ Configuración Paso a Paso
+
+#### **1. Crear Aplicación en Spotify Dashboard**
+
+1. Ve a [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+2. Haz clic en **"Create App"**
+3. Completa la información:
+   - **App name:** Tu nombre de aplicación
+   - **App description:** Descripción de tu app
+   - **Website:** URL de tu sitio web (opcional)
+   - **Redirect URI:** `com.example.ui://` (importante)
+4. Acepta los términos y crea la aplicación
+
+#### **2. Configurar Redirect URI**
+
+1. En tu aplicación, ve a **"Edit Settings"**
+2. En la sección **"Redirect URIs"**, agrega:
+   ```
+   com.example.ui://
+   ```
+3. Haz clic en **"Save"**
+
+#### **3. Obtener Client ID**
+
+1. En la página de tu aplicación, copia el **"Client ID"**
+2. Será algo como: `9a5ca2dbd3d84250aacbde63de954f16`
+
+#### **4. Configurar el Proyecto**
+
+**Archivo `spotify-config.ts`:**
+```typescript
+export const SPOTIFY_CONFIG = {
+  CLIENT_ID: 'TU_CLIENT_ID_AQUI', // Reemplaza con tu Client ID real
+  REDIRECT_URI: 'com.example.ui://',
+  SCOPES: [
+    'user-read-private',
+    'user-read-email',
+    'playlist-read-private',
+    'playlist-read-collaborative',
+    'user-library-read'
+  ]
+};
+```
+
+**Archivo `app.json`:**
+```json
+{
+  "expo": {
+    "scheme": "com.example.ui",
+    "plugins": [
+      "expo-web-browser"
+    ]
+  }
+}
+```
+
+#### **5. Regenerar Código Nativo**
+
+```bash
+npx expo prebuild --clean
+```
+
+### 💻 Implementación del Código
+
+#### **Interfaces TypeScript**
+
+```typescript
+interface SpotifyUser {
+  id: string;
+  display_name: string;
+  email: string;
+  images: Array<{ url: string }>;
+}
+
+interface SpotifyPlaylist {
+  id: string;
+  name: string;
+  description: string;
+  images: Array<{ url: string }>;
+  tracks: {
+    total: number;
+  };
+  owner: {
+    display_name: string;
+  };
+}
+```
+
+#### **Función de Login OAuth 2.0**
+
+```typescript
+const handleSpotifyLogin = async () => {
+  try {
+    setIsLoading(true);
+    setError(null);
+
+    const authUrl = `https://accounts.spotify.com/authorize?client_id=${SPOTIFY_CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(SPOTIFY_REDIRECT_URI)}&scope=${encodeURIComponent(SPOTIFY_SCOPES)}&show_dialog=true`;
+
+    const result = await WebBrowser.openAuthSessionAsync(authUrl, SPOTIFY_REDIRECT_URI);
+
+    if (result.type === 'success') {
+      const url = result.url;
+      const accessToken = extractAccessToken(url);
+      
+      if (accessToken) {
+        await fetchUserProfile(accessToken);
+        await fetchUserPlaylists(accessToken);
+      } else {
+        setError('No se pudo obtener el token de acceso');
+      }
+    } else if (result.type === 'cancel') {
+      setError('Login cancelado por el usuario');
+    }
+  } catch (err) {
+    setError('Error durante el login: ' + err);
+  } finally {
+    setIsLoading(false);
+  }
+};
+```
+
+#### **Extraer Token de Acceso**
+
+```typescript
+const extractAccessToken = (url: string): string | null => {
+  const match = url.match(/access_token=([^&]*)/);
+  return match ? match[1] : null;
+};
+```
+
+#### **Obtener Perfil del Usuario**
+
+```typescript
+const fetchUserProfile = async (accessToken: string) => {
+  try {
+    const response = await fetch('https://api.spotify.com/v1/me', {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (response.ok) {
+      const userData: SpotifyUser = await response.json();
+      setUser(userData);
+    } else {
+      setError('Error al obtener el perfil del usuario');
+    }
+  } catch (err) {
+    setError('Error al obtener el perfil: ' + err);
+  }
+};
+```
+
+#### **Obtener Playlists del Usuario**
+
+```typescript
+const fetchUserPlaylists = async (accessToken: string) => {
+  try {
+    const response = await fetch('https://api.spotify.com/v1/me/playlists?limit=10', {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      setPlaylists(data.items);
+    } else {
+      setError('Error al obtener las playlists');
+    }
+  } catch (err) {
+    setError('Error al obtener playlists: ' + err);
+  }
+};
+```
+
+### 🎨 Interfaz de Usuario
+
+#### **Estados de la Aplicación**
+
+```typescript
+const [user, setUser] = useState<SpotifyUser | null>(null);
+const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
+const [isLoading, setIsLoading] = useState(false);
+const [error, setError] = useState<string | null>(null);
+```
+
+#### **Componente de Login**
+
+```typescript
+{!user ? (
+  <Pressable style={styles.loginButton} onPress={handleSpotifyLogin} disabled={isLoading}>
+    <Text style={styles.loginButtonText}>
+      {isLoading ? 'Conectando...' : 'Conectar con Spotify'}
+    </Text>
+  </Pressable>
+) : (
+  // Mostrar información del usuario y playlists
+)}
+```
+
+### 🔑 Permisos (Scopes) de Spotify
+
+| Scope | Descripción |
+|-------|-------------|
+| `user-read-private` | Leer información privada del usuario |
+| `user-read-email` | Leer email del usuario |
+| `playlist-read-private` | Leer playlists privadas |
+| `playlist-read-collaborative` | Leer playlists colaborativas |
+| `user-library-read` | Leer biblioteca del usuario |
+
+### 🚨 Manejo de Errores
+
+```typescript
+// Estados de error
+const [error, setError] = useState<string | null>(null);
+
+// Mostrar errores en la UI
+{error && <Text style={styles.errorText}>{error}</Text>}
+
+// Manejo de errores en las funciones
+try {
+  // Código de la función
+} catch (err) {
+  setError('Error descriptivo: ' + err);
+}
+```
+
+### 📱 Flujo de Autenticación
+
+1. **Usuario presiona "Conectar con Spotify"**
+2. **Se abre navegador con página de autorización de Spotify**
+3. **Usuario autoriza la aplicación**
+4. **Spotify redirige a la app con el token de acceso**
+5. **Se extrae el token de la URL**
+6. **Se hacen llamadas a la API de Spotify**
+7. **Se muestra la información del usuario y playlists**
+
+### 🔧 Solución de Problemas
+
+#### **Error: "Invalid redirect URI"**
+- Verifica que el Redirect URI en Spotify Dashboard coincida exactamente con `com.example.ui://`
+- Asegúrate de que el scheme en `app.json` sea `com.example.ui`
+
+#### **Error: "Client ID not found"**
+- Verifica que el Client ID en `spotify-config.ts` sea correcto
+- Asegúrate de que la aplicación esté creada en Spotify Dashboard
+
+#### **Error: "Token extraction failed"**
+- Verifica que el Redirect URI esté configurado correctamente
+- Asegúrate de que el usuario haya autorizado la aplicación
+
+### 🎯 Características Implementadas
+
+- ✅ **Login OAuth 2.0** seguro con Spotify
+- ✅ **Manejo de tokens** de acceso
+- ✅ **Perfil de usuario** completo
+- ✅ **Lista de playlists** del usuario
+- ✅ **Manejo de errores** robusto
+- ✅ **Estados de carga** y feedback visual
+- ✅ **Logout** funcional
+- ✅ **Interfaz moderna** con degradados
 
 ## 🎯 Animaciones Implementadas
 
@@ -320,6 +598,8 @@ const LoadingSpinner = () => {
 - [Documentación oficial de Animated](https://reactnative.dev/docs/animated)
 - [React Native Reanimated](https://docs.swmansion.com/react-native-reanimated/)
 - [Lottie para React Native](https://github.com/lottie-react-native/lottie-react-native)
+- [Spotify Web API](https://developer.spotify.com/documentation/web-api/)
+- [Expo Auth Session](https://docs.expo.dev/versions/latest/sdk/auth-session/)
 
 ## 🤝 Contribuir
 
@@ -335,8 +615,8 @@ Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) par
 
 ## 👨‍💻 Autor
 
-Creado con ❤️ para aprender animaciones en React Native
+Creado con ❤️ para aprender animaciones en React Native y OAuth 2.0
 
 ---
 
-**¡Disfruta creando animaciones increíbles! 🎨✨**
+**¡Disfruta creando animaciones increíbles y conectando con Spotify! 🎨✨🎵**
