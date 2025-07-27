@@ -40,13 +40,11 @@ const styles = StyleSheet.create({
   },
   gradientBackground: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 30,
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 50,
+    marginBottom: 40,
+    paddingHorizontal: 30,
   },
   spotifyLogo: {
     width: 120,
@@ -123,6 +121,7 @@ const styles = StyleSheet.create({
   playlistsContainer: {
     width: '100%',
     maxHeight: 300,
+    paddingHorizontal: 30,
   },
   playlistsTitle: {
     fontSize: 20,
@@ -272,7 +271,10 @@ export default function Domingo() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <ScrollView contentContainerStyle={{ alignItems: 'center' }} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          contentContainerStyle={{ alignItems: 'center', paddingTop: 50, paddingBottom: 30 }} 
+          showsVerticalScrollIndicator={false}
+        >
           {/* Logo y título */}
           <View style={styles.logoContainer}>
             <Ionicons name="musical-notes" size={120} color="#1DB954" style={styles.spotifyLogo} />
@@ -306,7 +308,7 @@ export default function Domingo() {
               {/* Lista de playlists */}
               <View style={styles.playlistsContainer}>
                 <Text style={styles.playlistsTitle}>Tus Playlists</Text>
-                {playlists.map((playlist) => (
+                {playlists.map((playlist: SpotifyPlaylist) => (
                   <View key={playlist.id} style={styles.playlistItem}>
                     {playlist.images && playlist.images[0] && (
                       <Image source={{ uri: playlist.images[0].url }} style={styles.playlistImage} />

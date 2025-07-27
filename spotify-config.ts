@@ -9,7 +9,7 @@
 
 // 2. Configurar la aplicación:
 //    - En la página de tu app, ve a "Edit Settings"
-//    - En "Redirect URIs", agrega: my-new-app://auth
+//    - En "Redirect URIs", agrega: com.example.ui://
 //    - Guarda los cambios
 
 // 3. Copiar el Client ID:
@@ -18,7 +18,7 @@
 
 export const SPOTIFY_CONFIG = {
   CLIENT_ID: '9a5ca2dbd3d84250aacbde63de954f16', // Client ID real de Spotify
-  REDIRECT_URI: 'com.example.ui://',
+  REDIRECT_URI: 'com.example.ui://', // URI de redirección configurada
   SCOPES: [
     'user-read-private',
     'user-read-email',
